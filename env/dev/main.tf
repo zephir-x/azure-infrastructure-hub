@@ -27,7 +27,8 @@ resource "azurerm_key_vault_secret" "jumpbox_ssh" {
   name         = "vm-jumpbox-ssh-private"
   value        = tls_private_key.jumpbox.private_key_pem
   key_vault_id = module.shared.key_vault_id
-  depends_on   = [module.shared]
+
+  depends_on = [module.shared]
 }
 
 module "database" {
@@ -40,6 +41,20 @@ module "database" {
   vnet_id             = module.shared.vnet_id
   subnet_id           = module.shared.subnet_database_id
   key_vault_id        = module.shared.key_vault_id
+  db_zone             = "2"
+
+  depends_on = [module.shared]
+}
+
+module "compute" {
+  source = "../../modules/compute"
+
+  project_prefix             = var.project_prefix
+  environment                = var.environment
+  location                   = azurerm_resource_group.main.location
+  resource_group_name        = azurerm_resource_group.main.name
+  log_analytics_workspace_id = module.shared.log_analytics_workspace_id
+  subnet_id                  = module.shared.subnet_compute_id
 
   depends_on = [module.shared]
 }

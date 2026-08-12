@@ -8,7 +8,8 @@ resource "azurerm_private_dns_zone_virtual_network_link" "postgres" {
   name                = "dns-link-postgres-${var.project_prefix}-${var.environment}"
   private_dns_zone_id = azurerm_private_dns_zone.postgres.id
   virtual_network_id  = var.vnet_id
-  depends_on          = [azurerm_private_dns_zone.postgres]
+
+  depends_on = [azurerm_private_dns_zone.postgres]
 }
 
 # Administrative credentials generation and secure storage
@@ -39,6 +40,7 @@ resource "azurerm_postgresql_flexible_server" "main" {
   backup_retention_days         = 7
   geo_redundant_backup_enabled  = false
   public_network_access_enabled = false
+  zone                          = var.db_zone
 
   depends_on = [azurerm_private_dns_zone_virtual_network_link.postgres]
 }

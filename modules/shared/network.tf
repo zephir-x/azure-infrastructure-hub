@@ -18,7 +18,8 @@ resource "azurerm_subnet" "compute" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [cidrsubnet(var.base_cidr, 2, 1)]
-  depends_on           = [azurerm_subnet.bastion]
+
+  depends_on = [azurerm_subnet.bastion]
 
   delegation {
     name = "aca-delegation"
@@ -34,7 +35,8 @@ resource "azurerm_subnet" "database" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [cidrsubnet(var.base_cidr, 2, 2)]
-  depends_on           = [azurerm_subnet.compute]
+
+  depends_on = [azurerm_subnet.compute]
 
   delegation {
     name = "pgsql-delegation"
@@ -50,5 +52,6 @@ resource "azurerm_subnet" "jumpbox" {
   resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = [cidrsubnet(var.base_cidr, 2, 3)]
-  depends_on           = [azurerm_subnet.database]
+
+  depends_on = [azurerm_subnet.database]
 }

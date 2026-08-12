@@ -17,3 +17,15 @@ output "subnet_compute_id" {
 output "subnet_database_id" {
   value = azurerm_subnet.database.id
 }
+
+output "acr_login_server" {
+  value = azurerm_container_registry.main.login_server
+}
+
+output "acr_id" {
+  value = azurerm_container_registry.main.id
+}
+
+output "aca_identity_id" {
+  value = azurerm_user_assigned_identity.aca.id
+}
