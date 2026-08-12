@@ -29,3 +29,7 @@ output "acr_id" {
 output "aca_identity_id" {
   value = azurerm_user_assigned_identity.aca.id
 }
+
+output "aca_identity_principal_id" {
+  value = azurerm_user_assigned_identity.aca.principal_id
+}

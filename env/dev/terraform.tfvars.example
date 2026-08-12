@@ -1,0 +1,3 @@
+﻿stripe_secret_key     = "sk_test_..."
+stripe_webhook_secret = "whsec_..."
+deepseek_api_key      = "sk-..."

@@ -58,3 +58,23 @@ module "compute" {
 
   depends_on = [module.shared]
 }
+
+module "apps" {
+  source = "../../modules/apps"
+
+  project_prefix               = var.project_prefix
+  environment                  = var.environment
+  location                     = azurerm_resource_group.main.location
+  resource_group_name          = azurerm_resource_group.main.name
+  container_app_environment_id = module.compute.container_app_environment_id
+  aca_identity_id              = module.shared.aca_identity_id
+  aca_identity_principal_id    = module.shared.aca_identity_principal_id
+  key_vault_id                 = module.shared.key_vault_id
+  postgres_fqdn                = module.database.postgres_server_fqdn
+  postgres_admin_password      = module.database.postgres_admin_password
+  stripe_secret_key            = var.stripe_secret_key
+  stripe_webhook_secret        = var.stripe_webhook_secret
+  deepseek_api_key             = var.deepseek_api_key
+
+  depends_on = [module.compute, module.database]
+}

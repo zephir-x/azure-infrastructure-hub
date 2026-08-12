@@ -28,7 +28,7 @@ variable "key_vault_id" {
 
 variable "db_sku_name" {
   type    = string
-  default = "B2s_v2"
+  default = "B_Standard_B2s"
 }
 
 variable "db_zone" {

@@ -22,3 +22,7 @@ terraform.rc
 
 # IDEs
 .idea/
+
+# Environment variables with secrets
+*.tfvars
+!*.example.tfvars

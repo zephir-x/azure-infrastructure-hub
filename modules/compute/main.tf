@@ -9,4 +9,10 @@ resource "azurerm_container_app_environment" "main" {
   # Network integration - putting the environment into our VNet
   infrastructure_subnet_id       = var.subnet_id
   internal_load_balancer_enabled = false
+
+  lifecycle {
+    ignore_changes = [
+      workload_profile
+    ]
+  }
 }
