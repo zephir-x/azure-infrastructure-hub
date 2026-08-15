@@ -4,6 +4,11 @@ resource "azurerm_container_app" "gymcore_frontend" {
   resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
 
+  identity {
+    type         = "UserAssigned"
+    identity_ids = [var.aca_identity_id]
+  }
+  
   registry {
     server   = "${var.container_registry_name}.azurecr.io"
     identity = var.aca_identity_id
@@ -41,5 +46,8 @@ resource "azurerm_container_app" "gymcore_frontend" {
     ]
   }
 
-  depends_on = [var.acr_pull_role_assignment_id]
+  depends_on = [
+    azurerm_role_assignment.aca_kv_secrets_user,
+    var.acr_pull_role_assignment_id
+  ]
 }
