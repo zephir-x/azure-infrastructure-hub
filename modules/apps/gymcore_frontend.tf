@@ -1,14 +1,19 @@
-﻿resource "azurerm_container_app" "gymcore_frontend" {
+resource "azurerm_container_app" "gymcore_frontend" {
   name                         = "app-gymcore-front-${var.environment}"
   container_app_environment_id = var.container_app_environment_id
   resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
 
+  registry {
+    server   = "${var.container_registry_name}.azurecr.io"
+    identity = var.aca_identity_id
+  }
+
   ingress {
     allow_insecure_connections = false
     external_enabled           = true
     target_port                = 80
-    
+
     traffic_weight {
       percentage      = 100
       latest_revision = true
@@ -35,4 +40,6 @@
       workload_profile_name
     ]
   }
+
+  depends_on = [var.acr_pull_role_assignment_id]
 }

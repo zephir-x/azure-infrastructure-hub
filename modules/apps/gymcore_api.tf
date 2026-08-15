@@ -9,6 +9,11 @@ resource "azurerm_container_app" "gymcore_api" {
     identity_ids = [var.aca_identity_id]
   }
 
+  registry {
+    server   = "${var.container_registry_name}.azurecr.io"
+    identity = var.aca_identity_id
+  }
+
   ingress {
     allow_insecure_connections = false
     external_enabled           = true
@@ -94,5 +99,8 @@ resource "azurerm_container_app" "gymcore_api" {
     ]
   }
 
-  depends_on = [azurerm_role_assignment.aca_kv_secrets_user]
+  depends_on = [
+    azurerm_role_assignment.aca_kv_secrets_user,
+    var.acr_pull_role_assignment_id
+  ]
 }

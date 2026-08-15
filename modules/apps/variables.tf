@@ -18,11 +18,20 @@ variable "container_app_environment_id" {
   type = string
 }
 
+variable "container_registry_name" {
+  type        = string
+  description = "ACR registry name"
+}
+
 variable "aca_identity_id" {
   type = string
 }
 
 variable "aca_identity_principal_id" {
+  type = string
+}
+
+variable "acr_pull_role_assignment_id" {
   type = string
 }
 

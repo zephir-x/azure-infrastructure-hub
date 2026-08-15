@@ -26,6 +26,14 @@ output "acr_id" {
   value = azurerm_container_registry.main.id
 }
 
+output "acr_pull_role_assignment_id" {
+  value = azurerm_role_assignment.acr_pull.id
+}
+
+output "container_registry_name" {
+  value = azurerm_container_registry.main.name
+}
+
 output "aca_identity_id" {
   value = azurerm_user_assigned_identity.aca.id
 }

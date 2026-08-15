@@ -67,6 +67,8 @@ module "apps" {
   location                     = azurerm_resource_group.main.location
   resource_group_name          = azurerm_resource_group.main.name
   container_app_environment_id = module.compute.container_app_environment_id
+  container_registry_name      = module.shared.container_registry_name
+  acr_pull_role_assignment_id  = module.shared.acr_pull_role_assignment_id
   aca_identity_id              = module.shared.aca_identity_id
   aca_identity_principal_id    = module.shared.aca_identity_principal_id
   key_vault_id                 = module.shared.key_vault_id
