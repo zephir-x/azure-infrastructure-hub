@@ -75,7 +75,9 @@
 
   lifecycle {
     ignore_changes = [
-      workload_profile_name
+      workload_profile_name,
+      template.0.container.0.image, # Ignores Nginx container image managed by CI/CD
+      template.0.container.1.image  # Ignores the PHP container image managed by CI/CD
     ]
   }
 
