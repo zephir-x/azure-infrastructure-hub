@@ -55,3 +55,22 @@ resource "azurerm_role_assignment" "entra_id_user_login" {
   role_definition_name = "Virtual Machine Administrator Login"
   principal_id         = var.client_object_id
 }
+
+# We fetch information about our resource group to get its ID
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
+}
+
+# We give Jumpbox the rights to modify services (e.g. Container Apps)
+resource "azurerm_role_assignment" "jumpbox_rg_contributor" {
+  scope                = data.azurerm_resource_group.rg.id
+  role_definition_name = "Contributor"
+  principal_id         = azurerm_linux_virtual_machine.jumpbox.identity[0].principal_id
+}
+
+# We give Jumpbox the rights to upload Docker images to the ACR registry
+resource "azurerm_role_assignment" "jumpbox_acr_push" {
+  scope                = azurerm_container_registry.main.id
+  role_definition_name = "AcrPush"
+  principal_id         = azurerm_linux_virtual_machine.jumpbox.identity[0].principal_id
+}
