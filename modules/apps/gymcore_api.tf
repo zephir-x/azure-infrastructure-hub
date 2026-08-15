@@ -56,6 +56,9 @@ resource "azurerm_container_app" "gymcore_api" {
   }
 
   template {
+    min_replicas = 1
+    max_replicas = 10
+    
     container {
       name   = "gymcore-api"
       image  = "mcr.microsoft.com/k8se/quickstart:latest"

@@ -32,6 +32,9 @@
   }
 
   template {
+    min_replicas = 1
+    max_replicas = 10
+    
     # Container 1: NGINX (Web server receiving traffic)
     container {
       name   = "nginx"
