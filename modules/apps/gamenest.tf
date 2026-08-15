@@ -27,11 +27,20 @@
   }
 
   template {
+    # Container 1: NGINX (Web server receiving traffic)
     container {
-      name   = "gamenest-web"
+      name   = "nginx"
       image  = "mcr.microsoft.com/k8se/quickstart:latest"
-      cpu    = 0.5
-      memory = "1Gi"
+      cpu    = 0.25
+      memory = "0.5Gi"
+    }
+
+    # Container 2: PHP-FPM (Backend Processor as Sidecar)
+    container {
+      name   = "php"
+      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      cpu    = 0.25
+      memory = "0.5Gi"
 
       env {
         name  = "DB_HOST"
