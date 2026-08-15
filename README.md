@@ -1,15 +1,25 @@
 ﻿# Cloud Infrastructure Documentation
-
 <p>
-  <img src="https://img.shields.io/badge/AZURE-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure">
-  <img src="https://img.shields.io/badge/TERRAFORM-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform">
-  <img src="https://img.shields.io/badge/DOCKER-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
-  <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
-  <img src="https://img.shields.io/badge/POSTGRESQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
-  <img src="https://img.shields.io/badge/GITHUB%20ACTIONS-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
-  <img src="https://img.shields.io/badge/ARCHITECTURE-Cloud--Native-orange?style=for-the-badge" alt="Cloud-Native">
+<img src="https://img.shields.io/badge/AZURE-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure">
+<img src="https://img.shields.io/badge/TERRAFORM-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform">
+<img src="https://img.shields.io/badge/DOCKER-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+<img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
+<img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
+<img src="https://img.shields.io/badge/POSTGRESQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+<img src="https://img.shields.io/badge/GITHUB%20ACTIONS-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
+<img src="https://img.shields.io/badge/ARCHITECTURE-Cloud--Native-orange?style=for-the-badge" alt="Cloud-Native">
 </p>
+
+## Table of Contents
+1. [Introduction and Solution Architecture](#1-introduction-and-solution-architecture)
+2. [Architecture and Data Flow (Diagrams)](#2-architecture-and-data-flow-diagrams)
+3. [Infrastructure as Code (Terraform Structure)](#3-infrastructure-as-code-terraform-structure)
+4. [Engineering Challenges & Solved Problems](#4-engineering-challenges--solved-problems)
+5. [Step-by-Step Deployment Guide](#5-step-by-step-deployment-guide)
+6. [Infrastructure Proof of Execution (Visual Roadmap)](#6-infrastructure-proof-of-execution-visual-roadmap)
+7. [Environment Lifecycle & Cost Management (FinOps)](#7-environment-lifecycle--cost-management-finops)
+
+---
 
 ## 1. Introduction and Solution Architecture
 
@@ -59,17 +69,17 @@ flowchart TD
             subgraph BastionSubnet [AzureBastionSubnet] 
                 Bastion[Azure Bastion] 
             end 
-    
+            
             subgraph JumpboxSubnet [Management Subnet] 
                 Jumpbox[Jumpbox Machine / Self-Hosted Runner] 
             end 
-    
+            
             subgraph AppSubnet [Application Subnet - ACA Environment] 
                 ACA_Front[GymCore Frontend] 
                 ACA_API[GymCore REST API] 
                 ACA_GameNest[GameNest NGINX + PHP] 
             end 
-    
+            
             subgraph DBSubnet [Database Subnet] 
                 PostgreSQL[(Azure DB for PostgreSQL<br>Flexible Server)] 
             end
@@ -79,20 +89,20 @@ flowchart TD
         KV [Azure Key Vault]
     end
     
-    Internet -->|HTTPS / 443| ACA_Front
-    Internet -->|HTTPS / 443| ACA_API
-    Internet -->|HTTPS / 443| ACA_GameNest
-    Internet -->|HTTPS / 443| Bastion
+    Internet -->| "HTTPS / 443" | ACA_Front
+    Internet -->| "HTTPS / 443" | ACA_API
+    Internet -->| "HTTPS / 443" | ACA_GameNest
+    Internet -->| "HTTPS / 443" | Bastion
     
-    Bastion -->|SSH| Jumpbox
-    Jumpbox -->|Code Deployment| AppSubnet
-    Jumpbox -->|Database Management| PostgreSQL
+    Bastion -->| "SSH" | Jumpbox
+    Jumpbox -->| "Code Deployment" | AppSubnet
+    Jumpbox -->| "Database Management" | PostgreSQL
     
-    ACA_API -->|Read/Write| PostgreSQL
-    ACA_GameNest -->|Read/Write| PostgreSQL
+    ACA_API -->| "Read/Write" | PostgreSQL
+    ACA_GameNest -->| "Read/Write" | PostgreSQL
     
-    AppSubnet -.->|Downloading Docker Images| ACR
-    AppSubnet -.->|Downloading Secrets (Managed Identity)| KV
+    AppSubnet -.->| "Downloading Docker Images" | ACR
+    AppSubnet -.->| "Downloading Secrets (Managed Identity)" | KV
 ```
 
 ### 2.2. Sidecar Architecture for the GameNest Application
@@ -117,10 +127,10 @@ flowchart LR
     
     DB[(Azure PostgreSQL)]
 
-    Client -->|HTTP Request| Nginx
-    Nginx -->|Request Assets (.css, .js, .jpg)| StaticAssets
-    Nginx -->|Pass Script (.php)<br>fastcgi_pass 127.0.0.1:9000| PHP
-    PHP -->|PDO + SSL Connection| DB
+    Client -->| "HTTP Request" | Nginx
+    Nginx -->| "Request CSS/JS Assets" | StaticAssets
+    Nginx -->| "fastcgi_pass localhost:9000" | PHP
+    PHP -->| "PDO + SSL Connection" | DB
     
     style Nginx fill:#009639,stroke:#fff,stroke-width:2px,color:#fff
     style PHP fill:#4F5D95,stroke:#fff,stroke-width:2px,color:#fff
@@ -384,14 +394,10 @@ To validate the successful deployment and configuration of the infrastructure pr
 The initial phase validates that Terraform successfully translated the Infrastructure as Code (IaC) definitions into physical Azure resources. The resource group encapsulates all required PaaS components, networking elements, and managed identities.
 
 **Resource Group Overview:**
-<div>
-  <img src="./images/rg.png" alt="Resource Group" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Resource Group](./images/rg.png)
 
 **Provisioned Components Inventory:**
-<div>
-  <img src="./images/rg_content.png" alt="Resource Group Content" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Resource Group Content](./images/rg_content.png)
 
 ---
 
@@ -399,14 +405,10 @@ The initial phase validates that Terraform successfully translated the Infrastru
 Security through network isolation is a cornerstone of this project. The Virtual Network (VNET) is strictly segmented, and the persistence layer (PostgreSQL) is entirely cut off from the public internet, accessible only via private endpoints or internal subnets.
 
 **VNET Subnet Segmentation:**
-<div>
-  <img src="./images/subnets.png" alt="VNET Subnets" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![VNET Subnets](./images/subnets.png)
 
 **PostgreSQL Public Access Denial:**
-<div>
-  <img src="./images/networking.png" alt="Database Networking" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Database Networking](./images/networking.png)
 
 ---
 
@@ -414,14 +416,10 @@ Security through network isolation is a cornerstone of this project. The Virtual
 This phase proves the implementation of the Zero Trust security model. Services authenticate using Managed Identities instead of explicit credentials. The Key Vault acts as a central, encrypted repository for all environment variables and connection strings.
 
 **Role-Based Access Control (AcrPull Assignment):**
-<div>
-  <img src="./images/access_control.png" alt="IAM Access Control" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![IAM Access Control](./images/access_control.png)
 
 **Key Vault Secrets Storage:**
-<div>
-  <img src="./images/secrets.png" alt="Azure Key Vault Secrets" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Azure Key Vault Secrets](./images/secrets.png)
 
 ---
 
@@ -429,9 +427,7 @@ This phase proves the implementation of the Zero Trust security model. Services 
 To solve the PHP execution constraints in a serverless environment, the GameNest application utilizes the Sidecar pattern. This capture explicitly shows both the `nginx` and `php` containers operating concurrently within the same Azure Container Apps replica.
 
 **Container Apps Revisions & Replicas:**
-<div>
-  <img src="./images/revisions_replicas.png" alt="Sidecar Revisions and Replicas" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Sidecar Revisions and Replicas](./images/revisions_replicas.png)
 
 ---
 
@@ -439,19 +435,13 @@ To solve the PHP execution constraints in a serverless environment, the GameNest
 Continuous Deployment is facilitated by an isolated virtual machine. Access to this machine is secured via Azure Bastion (HTML5 SSH). The runner registers with GitHub Actions and successfully executes the deployment pipeline.
 
 **Secure SSH via Azure Bastion (Jumpbox):**
-<div>
-  <img src="./images/jumpbox.png" alt="Jumpbox SSH Console" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![Jumpbox SSH Console](./images/jumpbox.png)
 
 **GitHub Self-Hosted Runner Registration:**
-<div>
-  <img src="./images/runner.png" alt="GitHub Runner Status" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![GitHub Runner Status](./images/runner.png)
 
 **Successful Pipeline Execution:**
-<div>
-  <img src="./images/github_action.png" alt="GitHub Actions Pipeline" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![GitHub Actions Pipeline](./images/github_action.png)
 
 ---
 
@@ -459,11 +449,24 @@ Continuous Deployment is facilitated by an isolated virtual machine. Access to t
 The ultimate validation of the infrastructure. Both the modern decoupled GymCore application (.NET/React) and the containerized monolithic GameNest application (PHP/NGINX) are fully operational. They are securely exposed via HTTPS on dynamically generated `.azurecontainerapps.io` FQDNs, with successful database connectivity and active routing.
 
 **Live Application - GymCore:**
-<div>
-  <img src="./images/gymcore.png" alt="GymCore Application Live" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![GymCore Application Live](./images/gymcore.png)
 
 **Live Application - GameNest:**
-<div>
-  <img src="./images/gamenest.png" alt="GameNest Application Live" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
-</div>
+![GameNest Application Live](./images/gamenest.png)
+
+## 7. Environment Lifecycle & Cost Management (FinOps)
+
+**Current Status:**  *Infrastructure Decommissioned (Offline)*
+
+As this project serves as a comprehensive Proof of Concept (PoC) and portfolio showcase, the active Azure environment has been decommissioned via `terraform destroy` following successful validation and testing.
+
+**Cost Analysis & Drivers (~€15 over 3 days):**
+Maintaining a fully isolated, production-like environment in the public cloud incurs continuous runtime costs. The primary cost drivers for this specific architecture were:
+* **Azure Bastion:** Billed at a continuous hourly rate (approx. €4-€5/day). While it provides enterprise-grade, agentless SSH access without exposing public IPs, it is a significant fixed expense for a 24/7 PoC.
+* **Azure Database for PostgreSQL (Flexible Server):** Incurs continuous compute and storage allocation costs.
+* **Azure Container Registry & Log Analytics:** Base daily retention and storage fees.
+
+Decommissioning the environment demonstrates responsible cloud resource management (FinOps). Thanks to the robust Terraform automation, the entire infrastructure, along with its CI/CD integrations, can be fully rebuilt and spun up from scratch within 15 minutes whenever required.
+
+*Engineered by Kacper Gumulak* - [zephir-x](https://github.com/zephir-x)  
+*Full-Stack & Cloud-Native Infrastructure Development* 
