@@ -1,13 +1,14 @@
 ﻿# Cloud Infrastructure Documentation
+
 <p>
-<img src="https://img.shields.io/badge/AZURE-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure">
-<img src="https://img.shields.io/badge/TERRAFORM-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform">
-<img src="https://img.shields.io/badge/DOCKER-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-<img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
-<img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
-<img src="https://img.shields.io/badge/POSTGRESQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
-<img src="https://img.shields.io/badge/GITHUB%20ACTIONS-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
-<img src="https://img.shields.io/badge/ARCHITECTURE-Cloud--Native-orange?style=for-the-badge" alt="Cloud-Native">
+    <img src="https://img.shields.io/badge/AZURE-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure">
+    <img src="https://img.shields.io/badge/TERRAFORM-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform">
+    <img src="https://img.shields.io/badge/DOCKER-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+    <img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
+    <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
+    <img src="https://img.shields.io/badge/POSTGRESQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+    <img src="https://img.shields.io/badge/GITHUB%20ACTIONS-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
+    <img src="https://img.shields.io/badge/ARCHITECTURE-Cloud--Native-orange?style=for-the-badge" alt="Cloud-Native">
 </p>
 
 ## Table of Contents
@@ -58,51 +59,47 @@ The Azure cloud infrastructure was designed based on a multi-tier virtual networ
 
 ```mermaid
 flowchart TD
-    Internet((Public Internet)) 
+    Internet((Public Internet))
     
-    subgraph AzureCloud [Microsoft Azure Cloud] 
-        direction TB 
-    
-        subgraph VNET [Virtual Network - VNET] 
-            direction TB 
-    
-            subgraph BastionSubnet [AzureBastionSubnet] 
-                Bastion[Azure Bastion] 
-            end 
+    subgraph AzureCloud [Microsoft Azure Cloud]
+        subgraph VNET [Virtual Network - VNET]
+            subgraph BastionSubnet [AzureBastionSubnet]
+                Bastion[Azure Bastion]
+            end
             
-            subgraph JumpboxSubnet [Management Subnet] 
-                Jumpbox[Jumpbox Machine / Self-Hosted Runner] 
-            end 
+            subgraph JumpboxSubnet [Management Subnet]
+                Jumpbox[Jumpbox Machine / Self-Hosted Runner]
+            end
             
-            subgraph AppSubnet [Application Subnet - ACA Environment] 
-                ACA_Front[GymCore Frontend] 
-                ACA_API[GymCore REST API] 
-                ACA_GameNest[GameNest NGINX + PHP] 
-            end 
+            subgraph AppSubnet [Application Subnet - ACA Environment]
+                ACA_Front[GymCore Frontend]
+                ACA_API[GymCore REST API]
+                ACA_GameNest[GameNest NGINX + PHP]
+            end
             
-            subgraph DBSubnet [Database Subnet] 
-                PostgreSQL[(Azure DB for PostgreSQL<br>Flexible Server)] 
+            subgraph DBSubnet [Database Subnet]
+                PostgreSQL[(Azure DB for PostgreSQL<br>Flexible Server)]
             end
         end
-    
-        ACR [Azure Container Registry]
-        KV [Azure Key Vault]
+        
+        ACR[Azure Container Registry]
+        KV[Azure Key Vault]
     end
     
-    Internet -->| "HTTPS / 443" | ACA_Front
-    Internet -->| "HTTPS / 443" | ACA_API
-    Internet -->| "HTTPS / 443" | ACA_GameNest
-    Internet -->| "HTTPS / 443" | Bastion
+    Internet -- "HTTPS / 443" --> ACA_Front
+    Internet -- "HTTPS / 443" --> ACA_API
+    Internet -- "HTTPS / 443" --> ACA_GameNest
+    Internet -- "HTTPS / 443" --> Bastion
     
-    Bastion -->| "SSH" | Jumpbox
-    Jumpbox -->| "Code Deployment" | AppSubnet
-    Jumpbox -->| "Database Management" | PostgreSQL
+    Bastion -- "SSH" --> Jumpbox
+    Jumpbox -- "Code Deployment" --> AppSubnet
+    Jumpbox -- "Database Management" --> PostgreSQL
     
-    ACA_API -->| "Read/Write" | PostgreSQL
-    ACA_GameNest -->| "Read/Write" | PostgreSQL
+    ACA_API -- "Read/Write" --> PostgreSQL
+    ACA_GameNest -- "Read/Write" --> PostgreSQL
     
-    AppSubnet -.->| "Downloading Docker Images" | ACR
-    AppSubnet -.->| "Downloading Secrets (Managed Identity)" | KV
+    AppSubnet -. "Downloading Docker Images" .-> ACR
+    AppSubnet -. "Downloading Secrets (Managed Identity)" .-> KV
 ```
 
 ### 2.2. Sidecar Architecture for the GameNest Application
@@ -114,10 +111,7 @@ flowchart LR
     Client((User))
     
     subgraph ACA [Azure Container App: app-gamenest-dev]
-        direction TB
-        
         subgraph Pod [Shared Network Space / Replica]
-            direction LR
             Nginx["NGINX Container<br>(Port: 80)"]
             PHP["PHP-FPM Container<br>(Port: 9000)"]
         end
@@ -127,10 +121,10 @@ flowchart LR
     
     DB[(Azure PostgreSQL)]
 
-    Client -->| "HTTP Request" | Nginx
-    Nginx -->| "Request CSS/JS Assets" | StaticAssets
-    Nginx -->| "fastcgi_pass localhost:9000" | PHP
-    PHP -->| "PDO + SSL Connection" | DB
+    Client -- "HTTP Request" --> Nginx
+    Nginx -- "Request CSS/JS Assets" --> StaticAssets
+    Nginx -- "fastcgi_pass localhost:9000" --> PHP
+    PHP -- "PDO + SSL Connection" --> DB
     
     style Nginx fill:#009639,stroke:#fff,stroke-width:2px,color:#fff
     style PHP fill:#4F5D95,stroke:#fff,stroke-width:2px,color:#fff
