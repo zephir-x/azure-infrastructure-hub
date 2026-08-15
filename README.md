@@ -1,4 +1,15 @@
-﻿Cloud Infrastructure Documentation (Azure Serverless & Cloud-Native)
+﻿# Cloud Infrastructure Documentation
+
+<p>
+  <img src="https://img.shields.io/badge/AZURE-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white" alt="Azure">
+  <img src="https://img.shields.io/badge/TERRAFORM-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform">
+  <img src="https://img.shields.io/badge/DOCKER-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
+  <img src="https://img.shields.io/badge/NGINX-009639?style=for-the-badge&logo=nginx&logoColor=white" alt="NGINX">
+  <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP">
+  <img src="https://img.shields.io/badge/POSTGRESQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/GITHUB%20ACTIONS-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions">
+  <img src="https://img.shields.io/badge/ARCHITECTURE-Cloud--Native-orange?style=for-the-badge" alt="Cloud-Native">
+</p>
 
 ## 1. Introduction and Solution Architecture
 
@@ -36,14 +47,14 @@ The following architectural diagrams were generated using Mermaid syntax and ill
 The Azure cloud infrastructure was designed based on a multi-tier virtual network (VNET) model. Application services (Azure Container Apps) run in an isolated runtime environment. Access to the database layer is completely isolated from the public internet, and the architecture is managed via the highly secure Azure Bastion service and the Jumpbox machine.
 
 ```mermaid
-TD flowchart 
+flowchart TD
     Internet((Public Internet)) 
     
     subgraph AzureCloud [Microsoft Azure Cloud] 
-        directionTB 
+        direction TB 
     
         subgraph VNET [Virtual Network - VNET] 
-            directionTB 
+            direction TB 
     
             subgraph BastionSubnet [AzureBastionSubnet] 
                 Bastion[Azure Bastion] 
@@ -60,7 +71,7 @@ TD flowchart
             end 
     
             subgraph DBSubnet [Database Subnet] 
-                PostgreSQL[(Azure DB for PostgreSQL\nFlexible Server)] 
+                PostgreSQL[(Azure DB for PostgreSQL<br>Flexible Server)] 
             end
         end
     
@@ -97,18 +108,18 @@ flowchart LR
         
         subgraph Pod [Shared Network Space / Replica]
             direction LR
-            Nginx[NGINX Container\n(Port: 80)]
-            PHP[PHP-FPM Container\n(Port: 9000)]
+            Nginx["NGINX Container<br>(Port: 80)"]
+            PHP["PHP-FPM Container<br>(Port: 9000)"]
         end
         
-        StaticAssets[(Static Assets\n/app/public/)]
+        StaticAssets["Static Assets<br>/app/public/"]
     end
     
     DB[(Azure PostgreSQL)]
 
     Client -->|HTTP Request| Nginx
     Nginx -->|Request Assets (.css, .js, .jpg)| StaticAssets
-    Nginx -->|Pass Script (.php)\nfastcgi_pass 127.0.0.1:9000| PHP
+    Nginx -->|Pass Script (.php)<br>fastcgi_pass 127.0.0.1:9000| PHP
     PHP -->|PDO + SSL Connection| DB
     
     style Nginx fill:#009639,stroke:#fff,stroke-width:2px,color:#fff
@@ -139,3 +150,320 @@ sequenceDiagram
     ACA-->>Dev: New application version live in browser
 ```
 
+## 3. Infrastructure as Code (Terraform Structure)
+
+The infrastructure provisioning is fully automated using Terraform. To ensure maintainability, scalability, and strict adherence to the **DRY (Don't Repeat Yourself)** principle, the codebase is designed with enterprise-grade modularity.
+
+By separating the resource definitions (modules) from the environment-specific configurations (environments), the architecture allows for rapid, secure, and highly consistent deployments across multiple stages (e.g., Development, Staging, Production).
+
+### Logical Layering
+
+The infrastructure is logically divided into four functional tiers, ensuring that dependencies are resolved sequentially and securely:
+
+1. **Foundation (Shared):** The underlying network, security, and registry components.
+2. **Storage (Database):** The persistence layer, isolated from the public internet.
+3. **Runtime (Apps):** The containerized application layer, relying on the foundation and storage.
+4. **Orchestration (Env):** The environment-specific implementation that binds the above layers together using specific parameters.
+
+### Directory Layout
+
+The repository follows a clean and structured hierarchy to reflect the logical layering:
+
+```text
+.
+├── modules/
+│   ├── apps/               # Containerized application workloads
+│   │   ├── gamenest.tf         # Sidecar pattern definition (NGINX + PHP-FPM)
+│   │   ├── gymcore_api.tf      # GymCore .NET REST API
+│   │   ├── gymcore_frontend.tf # GymCore React.js Frontend
+│   │   └── iam_and_secrets.tf  # Managed Identities and Key Vault integrations
+│   │
+│   ├── compute/            # Computational resources
+│   │   └── main.tf             # Definitions for Virtual Machines (e.g., Jumpbox)
+│   │
+│   ├── database/           # Data persistence layer
+│   │   └── main.tf             # Azure Database for PostgreSQL Flexible Server
+│   │
+│   └── shared/             # Foundational infrastructure components
+│       ├── acr.tf              # Azure Container Registry
+│       ├── bastion.tf          # Azure Bastion for secure VM access
+│       ├── identity.tf         # User-Assigned Managed Identities
+│       ├── keyvault.tf         # Azure Key Vault for secrets management
+│       ├── log_analytics.tf    # Monitoring and logging workspaces
+│       └── network.tf          # VNET, Subnets, and Network Security Groups (NSG)
+│
+├── env/
+│   ├── dev/                # Development Environment Configuration
+│   │   ├── main.tf             # Calls the modules with Dev-specific parameters
+│   │   ├── providers.tf        # Azure Provider and remote backend configuration
+│   │   ├── terraform.tfvars    # Variable values (SKUs, naming conventions)
+│   │   └── variables.tf        # Environment variable declarations
+│   │
+│   └── prod/               # Production Environment Configuration (Analogous to Dev)
+│
+└── scripts/
+    └── bootstrap-state.sh  # Shell script to provision Azure Storage Account for remote tfstate
+```
+
+*Note: Each directory within /modules also contains dedicated variables.tf (input parameters) and outputs.tf (exported values for cross-module referencing).*
+
+### The Power of Modularity and the DRY Principle
+This structural approach offers significant engineering advantages:
+
+- **Centralized Logic**: Resource configurations (like the Sidecar setup for GameNest or VNET peering) are written exactly once in the `/modules` directory. If a baseline security rule needs updating, it is changed in one place, automatically propagating to all environments upon the next application.
+
+- **Environment Replication**: Spinning up a completely new environment (e.g., `QA` or `UAT`) requires zero code duplication. It is achieved simply by copying the `/env/dev` folder, renaming it to `/env/qa`, and adjusting the SKU sizes or instance counts in the `terraform.tfvars` file.
+
+- **State Isolation**: Each environment maintains its own Terraform state file (`.tfstate`) in the remote Azure Storage backend. This guarantees that changes or potential failures in the Development environment have absolutely zero impact on Production.
+
+## 4. Engineering Challenges & Solved Problems
+
+Migrating legacy on-premises applications to a fully managed, serverless cloud environment introduced several complex architectural and operational challenges. This section highlights the technical pitfalls encountered and the engineering strategies implemented to overcome them, demonstrating a deep understanding of Cloud-Native paradigms.
+
+### 4.1. Terraform State vs. CI/CD Pipeline Conflicts
+* **The Challenge:** Azure Container Apps require a container image to be specified upon creation. However, continuous deployment via GitHub Actions updates the image tags dynamically. Running `terraform apply` subsequently would detect a state drift and attempt to overwrite the CI/CD-deployed image with the older base image defined in the infrastructure code, effectively destroying live deployments.
+* **The Solution:** Implemented the `lifecycle { ignore_changes = [template[0].container] }` block within the Terraform AzureRM provider. This crucial decoupling ensures that Terraform solely manages the underlying infrastructure constraints (CPU, memory, networking) while yielding the authority over the application state (image versions and environment variables) entirely to the GitHub Actions CI/CD pipelines.
+
+### 4.2. Dynamic FQDNs, CORS, and Build-Time Injection (Vite & .NET)
+* **The Challenge:** Azure Container Apps generate dynamic, non-deterministic Fully Qualified Domain Names (FQDNs) containing random hashes. This made it impossible to hardcode API endpoints in the React frontend or configure static CORS origins in the .NET backend.
+* **The Solution:**
+    * **Backend (.NET):** Configured a dynamic CORS policy utilizing `SetIsOriginAllowed(origin => origin.EndsWith(".azurecontainerapps.io"))`, securely allowing cross-origin requests from any dynamically generated ACA frontend environment.
+    * **Frontend (React/Vite):** Engineered a dynamic build step in the GitHub Actions runner. The pipeline queries the Azure CLI (`az containerapp show`) to extract the newly generated backend API FQDN in real-time, injecting it directly into the `.env` file before executing `npm run build`.
+
+### 4.3. Sidecar Networking & Static Asset Delivery (NGINX + PHP)
+* **The Challenge:** Adapting a traditional PHP monolithic structure to a containerized environment resulted in `502 Bad Gateway` and `404 Not Found` errors. NGINX could not reach PHP, and static assets (CSS/JS) were missing from the web server response.
+* **The Solution:** Fully leveraged the ACA **Sidecar** pattern capabilities.
+    * **Networking:** Configured the NGINX `fastcgi_pass` directive to target `127.0.0.1:9000` instead of a container hostname, capitalizing on the fact that sidecar containers in ACA share the same local network namespace.
+    * **Asset Delivery:** Modified the NGINX `Dockerfile` to independently copy the `/public` directory into its own image. This decoupled the static asset serving from the PHP container, optimizing performance and eliminating 404 routing errors.
+
+### 4.4. Robust Cloud Database Seeding & Complex SQL Execution
+* **The Challenge:** The application required an automated database initialization on its first run in the cloud. Attempting to execute the `init.sql` file via PHP's `$pdo->exec()` failed silently or caused `500 Internal Server Errors` because standard PDO drivers struggle to parse large, multi-statement dumps containing complex PL/pgSQL functions and triggers.
+* **The Solution:** Shifted the database initialization responsibility to the container's startup sequence. Installed the native `postgresql-client` in the Alpine image and engineered the `entrypoint.sh` script to query the database state (`SELECT TO_REGCLASS(...)`). If the database is empty, the script securely executes the `init.sql` file via the native `psql` command-line tool before starting the PHP-FPM process.
+* **Docker Context Trap:** Identified and resolved a subtle deployment bug where the initialization script was missing in the cloud due to a broad `.dockerignore` rule. Fixed by explicitly whitelisting the file (`!db/init/init.sql`), ensuring flawless cloud seeding.
+
+### 4.5. Cross-Platform Execution Traps (Windows to Alpine Linux)
+* **The Challenge:** Shell scripts (`entrypoint.sh`) authored or checked out on Windows environments inherited `CRLF` (Carriage Return Line Feed) line endings. When executed inside the strict Linux Alpine container, the OS kernel threw an `exec format error` (`/bin/sh^M: bad interpreter`), causing the container to crash immediately upon startup.
+* **The Solution:** Implemented aggressive formatting normalization directly within the `Dockerfile`. Utilized `RUN sed -i 's/\r$//' /entrypoint.sh` to strip Windows carriage returns during the image build process. Furthermore, explicitly declared `ENTRYPOINT ["sh", "/entrypoint.sh"]` to bypass shebang (`#!`) parsing issues entirely, guaranteeing bulletproof container startups regardless of the developer's host operating system.
+
+## 5. Step-by-Step Deployment Guide
+
+This section provides a comprehensive, highly detailed playbook for replicating the entire infrastructure from scratch. The process spans from initial cloud authentication to the final execution of the CI/CD pipelines on isolated, self-hosted runners.
+
+### Step 1: Prerequisites & Authentication
+
+Before executing any infrastructure code, ensure your local development environment meets the following requirements:
+
+* **Azure Subscription:** An active Microsoft Azure subscription.
+* **IAM Permissions:** The executing user/service principal must possess the **Contributor** role (to create resources) and the **User Access Administrator** role (to grant RBAC permissions to Managed Identities).
+* **CLI Tools:**
+    * [Terraform](https://developer.hashicorp.com/terraform/downloads) (v1.5.0 or newer)
+    * [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli) (`az`)
+* **Authentication:** Authenticate your local Azure CLI session:
+  ```bash
+  az login
+  az account set --subscription "<YOUR_SUBSCRIPTION_ID>"
+  ```
+
+### Step 2: Remote State Initialization (Bootstrap)
+To ensure team collaboration and prevent state corruption, Terraform state must be stored in a remote, encrypted Azure Storage Account.
+
+1. Navigate to the root directory of the project.
+2. Execute the bootstrap script to provision the necessary resource group, storage account, and blob container:
+
+   ```bash
+   chmod +x scripts/bootstrap-state.sh
+   ./scripts/bootstrap-state.sh
+   ```
+
+3. The script will output the storage account details. Update the `backend "azurerm"` block inside `env/dev/providers.tf` with the generated values:
+
+   ```hcl
+   backend "azurerm" {
+     resource_group_name  = "rg-terraform-state"
+     storage_account_name = "sttfstate<random_hash>"
+     container_name       = "tfstate"
+     key                  = "dev.terraform.tfstate"
+   }
+   ```
+
+**Security Note:** Pass the Storage Account Access Key via the `ARM_ACCESS_KEY` environment variable rather than hardcoding it in the configuration files.
+
+### Step 3: Infrastructure Provisioning
+With the remote state configured, proceed to provision the foundational network, databases, registries, and compute resources.
+
+1. Navigate to the target environment directory:
+   ```bash
+   cd env/dev
+   ```
+2. Initialize the Terraform workspace and download required provider plugins:
+   ```bash
+   terraform init
+   ```
+3. Generate an execution plan to verify the resources that will be created:
+   ```bash
+   terraform plan -out=infrastructure.tfplan
+   ```
+4. Apply the execution plan to provision the Azure resources (this process typically takes 10-15 minutes):
+   ```bash
+   terraform apply infrastructure.tfplan
+   ```
+
+### Step 4: Jumpbox & Self-Hosted Runner Configuration
+Once Terraform completes, the Virtual Network (VNET) and the isolated Jumpbox Virtual Machine are provisioned. The next step is to configure this VM as the execution environment for GitHub Actions.
+
+*   **Secure Connection:** Navigate to the Azure Portal, locate your Jumpbox VM, and connect to it using Azure Bastion (HTML5 SSH client via browser). Use the SSH credentials defined in your `terraform.tfvars`.
+*   **Install Runtime Dependencies:** Once connected to the Linux terminal, install the required packages (Docker and Azure CLI):
+
+    ```bash
+    # Update system and install prerequisites
+    sudo apt-get update -y && sudo apt-get upgrade -y
+    sudo apt-get install -y curl jq build-essential libssl-dev libffi-dev python3-venv
+
+    # Install Docker Engine
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    sudo usermod -aG docker $USER
+
+    # Install Azure CLI
+    curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+    ```
+
+*   **Configure Isolated GitHub Actions Runners:** To handle deployments for both applications concurrently without workspace conflicts, set up two distinct runner instances.
+
+    ```bash
+    # Create isolated directories
+    mkdir -p ~/actions-runner-gymcore ~/actions-runner-gamenest
+    ```
+
+    **GymCore Runner Configuration:**
+    ```bash
+    cd ~/actions-runner-gymcore
+    curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.316.1/actions-runner-linux-x64-2.316.1.tar.gz
+    tar xzf ./actions-runner-linux-x64.tar.gz
+    ./config.sh --url https://github.com/<YOUR_USER>/<GYMCORE_REPO> --token <GITHUB_RUNNER_TOKEN_1> --name "jumpbox-gymcore" --unattended
+    sudo ./svc.sh install
+    sudo ./svc.sh start
+    ```
+
+    **GameNest Runner Configuration:**
+    ```bash
+    cd ~/actions-runner-gamenest
+    curl -o actions-runner-linux-x64.tar.gz -L https://github.com/actions/runner/releases/download/v2.316.1/actions-runner-linux-x64-2.316.1.tar.gz
+    tar xzf ./actions-runner-linux-x64.tar.gz
+    ./config.sh --url https://github.com/<YOUR_USER>/<GAMENEST_REPO> --token <GITHUB_RUNNER_TOKEN_2> --name "jumpbox-gamenest" --unattended
+    sudo ./svc.sh install
+    sudo ./svc.sh start
+    ```
+
+### Step 5: CI/CD Pipeline Execution & Application Deployment
+
+*Prerequisite: Ensure you have forked the source repositories to your own GitHub account. You cannot trigger deployments or register runners against the original source repositories due to lack of write permissions.*
+
+With the infrastructure running and the Self-Hosted Runners reporting as "Online" in the GitHub repository settings, the final step is to deploy the applications.
+
+1. Navigate to the **Actions** tab in your GitHub repositories (for both GymCore and GameNest).
+2. Manually trigger the deployment workflows by selecting the workflow and clicking **Run workflow** (or simply execute a `git push origin main` if triggers are set on the main branch).
+
+**Pipeline Execution Sequence:**
+1. The Jumpbox runner intercepts the job.
+2. It logs into Azure securely using the assigned Managed Identity (`az login --identity`).
+3. For the GymCore frontend, it queries the Azure CLI to dynamically retrieve the API's FQDN and generates the `.env` file on the fly.
+4. Docker Engine on the Jumpbox builds the application images.
+5. The images are pushed to the private Azure Container Registry (ACR).
+6. Finally, the pipeline issues an `az containerapp update` command, forcing the Azure Container Apps environment to pull the new images and roll out the latest revision.
+
+**Verification:** Once the pipelines succeed, retrieve the Application FQDNs from the Azure Portal and navigate to them in your browser to verify the secure HTTPS connection, the Sidecar operational status, and successful database connectivity.
+
+## 6. Infrastructure Proof of Execution (Visual Roadmap)
+
+To validate the successful deployment and configuration of the infrastructure prior to executing the environment teardown (`terraform destroy`), the following visual roadmap documents the critical components of the architecture. These captures serve as a definitive proof of concept for the engineering solutions described in earlier sections.
+
+---
+
+### Phase 1: Foundation & Resource Allocation
+The initial phase validates that Terraform successfully translated the Infrastructure as Code (IaC) definitions into physical Azure resources. The resource group encapsulates all required PaaS components, networking elements, and managed identities.
+
+**Resource Group Overview:**
+<div>
+  <img src="./images/rg.png" alt="Resource Group" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**Provisioned Components Inventory:**
+<div>
+  <img src="./images/rg_content.png" alt="Resource Group Content" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+---
+
+### Phase 2: Network Topography & Database Isolation
+Security through network isolation is a cornerstone of this project. The Virtual Network (VNET) is strictly segmented, and the persistence layer (PostgreSQL) is entirely cut off from the public internet, accessible only via private endpoints or internal subnets.
+
+**VNET Subnet Segmentation:**
+<div>
+  <img src="./images/subnets.png" alt="VNET Subnets" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**PostgreSQL Public Access Denial:**
+<div>
+  <img src="./images/networking.png" alt="Database Networking" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+---
+
+### Phase 3: Zero Trust Security & Secrets Management
+This phase proves the implementation of the Zero Trust security model. Services authenticate using Managed Identities instead of explicit credentials. The Key Vault acts as a central, encrypted repository for all environment variables and connection strings.
+
+**Role-Based Access Control (AcrPull Assignment):**
+<div>
+  <img src="./images/access_control.png" alt="IAM Access Control" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**Key Vault Secrets Storage:**
+<div>
+  <img src="./images/secrets.png" alt="Azure Key Vault Secrets" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+---
+
+### Phase 4: Sidecar Architecture Validation
+To solve the PHP execution constraints in a serverless environment, the GameNest application utilizes the Sidecar pattern. This capture explicitly shows both the `nginx` and `php` containers operating concurrently within the same Azure Container Apps replica.
+
+**Container Apps Revisions & Replicas:**
+<div>
+  <img src="./images/revisions_replicas.png" alt="Sidecar Revisions and Replicas" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+---
+
+### Phase 5: Self-Hosted Runner & CI/CD Pipeline
+Continuous Deployment is facilitated by an isolated virtual machine. Access to this machine is secured via Azure Bastion (HTML5 SSH). The runner registers with GitHub Actions and successfully executes the deployment pipeline.
+
+**Secure SSH via Azure Bastion (Jumpbox):**
+<div>
+  <img src="./images/jumpbox.png" alt="Jumpbox SSH Console" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**GitHub Self-Hosted Runner Registration:**
+<div>
+  <img src="./images/runner.png" alt="GitHub Runner Status" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**Successful Pipeline Execution:**
+<div>
+  <img src="./images/github_action.png" alt="GitHub Actions Pipeline" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+---
+
+### Phase 6: The Final Product (Live Applications)
+The ultimate validation of the infrastructure. Both the modern decoupled GymCore application (.NET/React) and the containerized monolithic GameNest application (PHP/NGINX) are fully operational. They are securely exposed via HTTPS on dynamically generated `.azurecontainerapps.io` FQDNs, with successful database connectivity and active routing.
+
+**Live Application - GymCore:**
+<div>
+  <img src="./images/gymcore.png" alt="GymCore Application Live" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
+
+**Live Application - GameNest:**
+<div>
+  <img src="./images/gamenest.png" alt="GameNest Application Live" style="border-radius: 10px; border: 1px solid #e1e4e8; box-shadow: 0 4px 8px rgba(0,0,0,0.1); max-width: 100%; margin-top: 10px; margin-bottom: 20px;">
+</div>
