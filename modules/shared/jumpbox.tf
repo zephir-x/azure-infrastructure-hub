@@ -1,4 +1,5 @@
-# Jumpbox Virtual Machine with Entra ID authentication
+# Configures the internal Network Interface (NIC) for the Jumpbox VM
+# Placed securely inside the dedicated 'snet-jumpbox' subnet
 resource "azurerm_network_interface" "jumpbox" {
   name                = "nic-jumpbox-${var.project_prefix}-${var.environment}"
   location            = var.location
@@ -11,6 +12,7 @@ resource "azurerm_network_interface" "jumpbox" {
   }
 }
 
+# Provisions a lightweight Ubuntu Linux VM acting as a Jumpbox and Self-Hosted Runner for CI/CD
 resource "azurerm_linux_virtual_machine" "jumpbox" {
   name                  = "vm-jump-${var.project_prefix}-${var.environment}"
   resource_group_name   = var.resource_group_name
@@ -19,6 +21,7 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   admin_username        = "adminuser"
   network_interface_ids = [azurerm_network_interface.jumpbox.id]
 
+  # Enables a System-Assigned Managed Identity for secure, credential-less Azure resource access
   identity {
     type = "SystemAssigned"
   }
@@ -41,6 +44,8 @@ resource "azurerm_linux_virtual_machine" "jumpbox" {
   }
 }
 
+# Installs the Entra ID (Azure AD) SSH login extension
+# Allows administrators to log into the VM using their Azure credentials instead of relying solely on SSH keys
 resource "azurerm_virtual_machine_extension" "entra_id_login" {
   name                       = "AADSSHLoginForLinux"
   virtual_machine_id         = azurerm_linux_virtual_machine.jumpbox.id
@@ -50,25 +55,27 @@ resource "azurerm_virtual_machine_extension" "entra_id_login" {
   auto_upgrade_minor_version = true
 }
 
+# Grants the executing user/administrator the rights to log into the VM via Entra ID
 resource "azurerm_role_assignment" "entra_id_user_login" {
   scope                = azurerm_linux_virtual_machine.jumpbox.id
   role_definition_name = "Virtual Machine Administrator Login"
   principal_id         = var.client_object_id
 }
 
-# We fetch information about our resource group to get its ID
+# Fetches the current Resource Group reference to construct IAM scopes
 data "azurerm_resource_group" "rg" {
   name = var.resource_group_name
 }
 
-# We give Jumpbox the rights to modify services (e.g. Container Apps)
+# Grants the Jumpbox VM's Managed Identity 'Contributor' rights over the entire Resource Group
+# This is required for the GitHub Actions Runner to execute 'az containerapp update' and manage infrastructure
 resource "azurerm_role_assignment" "jumpbox_rg_contributor" {
   scope                = data.azurerm_resource_group.rg.id
   role_definition_name = "Contributor"
   principal_id         = azurerm_linux_virtual_machine.jumpbox.identity[0].principal_id
 }
 
-# We give Jumpbox the rights to upload Docker images to the ACR registry
+# Grants the Jumpbox VM the ability to push compiled Docker images to the Azure Container Registry
 resource "azurerm_role_assignment" "jumpbox_acr_push" {
   scope                = azurerm_container_registry.main.id
   role_definition_name = "AcrPush"

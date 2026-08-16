@@ -1,15 +1,21 @@
+# Fetches current Azure context (Tenant ID, Subscription ID, Object ID)
+# Required for assigning RBAC roles and Key Vault access policies to the executor
 data "azurerm_client_config" "current" {}
 
+# Primary resource group acting as a logical container for all environment resources
 resource "azurerm_resource_group" "main" {
   name     = "rg-${var.project_prefix}-${var.environment}"
   location = var.location
 }
 
+# Generates a dynamic RSA key pair for secure SSH access to the Jumpbox
 resource "tls_private_key" "jumpbox" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
 
+# --- Tier 1: Foundation Layer ---
+# Provisions VNET, Subnets, NSGs, Key Vault, ACR, and Managed Identities
 module "shared" {
   source = "../../modules/shared"
 
@@ -23,6 +29,8 @@ module "shared" {
   jumpbox_ssh_public_key = tls_private_key.jumpbox.public_key_openssh
 }
 
+# Stores the generated Jumpbox SSH private key securely in Azure Key Vault
+# Ensures no private keys are stored in plain text outside the remote state
 resource "azurerm_key_vault_secret" "jumpbox_ssh" {
   name         = "vm-jumpbox-ssh-private"
   value        = tls_private_key.jumpbox.private_key_pem
@@ -31,6 +39,9 @@ resource "azurerm_key_vault_secret" "jumpbox_ssh" {
   depends_on = [module.shared]
 }
 
+# --- Tier 2: Storage & Persistence Layer ---
+# Provisions Azure Database for PostgreSQL Flexible Server
+# Requires shared network infrastructure to be deployed first for VNET integration
 module "database" {
   source = "../../modules/database"
 
@@ -46,6 +57,8 @@ module "database" {
   depends_on = [module.shared]
 }
 
+# --- Tier 3: Compute Layer ---
+# Provisions Azure Container Apps Environment and associated workspaces
 module "compute" {
   source = "../../modules/compute"
 
@@ -59,6 +72,9 @@ module "compute" {
   depends_on = [module.shared]
 }
 
+# --- Tier 4: Application Workloads Layer ---
+# Provisions Container Apps (GymCore API, GymCore Frontend, GameNest Sidecar)
+# Orchestrates connections between managed identities, database endpoints, and external secrets
 module "apps" {
   source = "../../modules/apps"
 

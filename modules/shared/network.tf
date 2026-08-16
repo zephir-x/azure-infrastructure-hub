@@ -1,4 +1,4 @@
-# Virtual Network and Subnets configuration
+# Provisions the foundational Virtual Network (VNET) encapsulating all ecosystem resources
 resource "azurerm_virtual_network" "main" {
   name                = "vnet-${var.project_prefix}-${var.environment}"
   location            = var.location
@@ -6,6 +6,8 @@ resource "azurerm_virtual_network" "main" {
   address_space       = [var.base_cidr]
 }
 
+# Dedicated subnet for Azure Bastion. The name 'AzureBastionSubnet' is strictly required by Azure
+# Uses the first chunk of the base CIDR
 resource "azurerm_subnet" "bastion" {
   name                 = "AzureBastionSubnet"
   resource_group_name  = var.resource_group_name
@@ -13,6 +15,7 @@ resource "azurerm_subnet" "bastion" {
   address_prefixes     = [cidrsubnet(var.base_cidr, 4, 0)]
 }
 
+# Dedicated subnet for Azure Container Apps Environment (Compute Layer)
 resource "azurerm_subnet" "compute" {
   name                 = "snet-compute"
   resource_group_name  = var.resource_group_name
@@ -21,6 +24,7 @@ resource "azurerm_subnet" "compute" {
 
   depends_on = [azurerm_subnet.bastion]
 
+  # Explicit delegation required by Azure to allow Container Apps to inject itself into the VNET
   delegation {
     name = "aca-delegation"
     service_delegation {
@@ -30,6 +34,7 @@ resource "azurerm_subnet" "compute" {
   }
 }
 
+# Dedicated subnet for PostgreSQL Flexible Server (Database Layer)
 resource "azurerm_subnet" "database" {
   name                 = "snet-database"
   resource_group_name  = var.resource_group_name
@@ -38,6 +43,7 @@ resource "azurerm_subnet" "database" {
 
   depends_on = [azurerm_subnet.compute]
 
+  # Explicit delegation required by Azure to allow the database service to bind to this subnet
   delegation {
     name = "pgsql-delegation"
     service_delegation {
@@ -47,6 +53,7 @@ resource "azurerm_subnet" "database" {
   }
 }
 
+# Dedicated subnet for management operations, hosting the Jumpbox VM
 resource "azurerm_subnet" "jumpbox" {
   name                 = "snet-jumpbox"
   resource_group_name  = var.resource_group_name

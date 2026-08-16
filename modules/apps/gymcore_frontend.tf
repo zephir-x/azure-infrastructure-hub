@@ -1,14 +1,18 @@
+# --- GymCore React Frontend Deployment ---
+# Specifically designed for a decoupled React/Vite SPA architecture
+
 resource "azurerm_container_app" "gymcore_frontend" {
   name                         = "app-gymcore-front-${var.environment}"
   container_app_environment_id = var.container_app_environment_id
   resource_group_name          = var.resource_group_name
   revision_mode                = "Single"
 
+  # Attaches the Managed Identity used for secure ACR pulls and Key Vault access
   identity {
     type         = "UserAssigned"
     identity_ids = [var.aca_identity_id]
   }
-  
+
   registry {
     server   = "${var.container_registry_name}.azurecr.io"
     identity = var.aca_identity_id
@@ -28,14 +32,15 @@ resource "azurerm_container_app" "gymcore_frontend" {
   template {
     min_replicas = 1
     max_replicas = 10
-    
+
     container {
       name   = "gymcore-frontend"
+      # Initial placeholder image. GitHub Actions CI/CD will overwrite this with the actual application build
       image  = "mcr.microsoft.com/k8se/quickstart:latest"
       cpu    = 0.5
       memory = "1Gi"
 
-      # Dynamically mapping the generated API URL
+      # Dynamically injects the API FQDN generated in gymcore_api.tf so the frontend knows where to send requests
       env {
         name  = "VITE_API_URL"
         value = "https://${azurerm_container_app.gymcore_api.ingress[0].fqdn}"

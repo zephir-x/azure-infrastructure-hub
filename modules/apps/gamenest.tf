@@ -1,4 +1,7 @@
-﻿resource "azurerm_container_app" "gamenest" {
+﻿# --- GameNest Deployment (Sidecar Architecture) ---
+# Custom architectural implementation to run a monolithic PHP application in a serverless environment
+
+resource "azurerm_container_app" "gamenest" {
   name                         = "app-gamenest-${var.environment}"
   container_app_environment_id = var.container_app_environment_id
   resource_group_name          = var.resource_group_name
@@ -18,7 +21,7 @@
     allow_insecure_connections = false
     external_enabled           = true
     target_port                = 80
-    
+
     traffic_weight {
       percentage      = 100
       latest_revision = true
@@ -34,19 +37,23 @@
   template {
     min_replicas = 1
     max_replicas = 10
-    
-    # Container 1: NGINX (Web server receiving traffic)
+
+    # --- Multi-Container Setup (Sidecar Pattern) ---
+
+    # Container 1: NGINX (Web server receiving external traffic and serving static assets)
+    # Routes dynamic PHP requests to localhost:9000
     container {
       name   = "nginx"
-      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      image  = "mcr.microsoft.com/k8se/quickstart:latest" # Placeholder for CI/CD
       cpu    = 0.25
       memory = "0.5Gi"
     }
 
     # Container 2: PHP-FPM (Backend Processor as Sidecar)
+    # Listens on localhost:9000, sharing the same network namespace as the NGINX container
     container {
       name   = "php"
-      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      image  = "mcr.microsoft.com/k8se/quickstart:latest" # Placeholder for CI/CD
       cpu    = 0.25
       memory = "0.5Gi"
 
@@ -73,11 +80,13 @@
     }
   }
 
+  # Ignores changes to BOTH container images
+  # This prevents 'terraform apply' from destroying the live versions deployed by GitHub Actions
   lifecycle {
     ignore_changes = [
       workload_profile_name,
-      template.0.container.0.image, # Ignores Nginx container image managed by CI/CD
-      template.0.container.1.image  # Ignores the PHP container image managed by CI/CD
+      template.0.container.0.image,
+      template.0.container.1.image
     ]
   }
 

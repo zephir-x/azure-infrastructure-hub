@@ -15,9 +15,11 @@ variable "resource_group_name" {
 }
 
 variable "log_analytics_workspace_id" {
-  type = string
+  type        = string
+  description = "ID of the Log Analytics Workspace for centralized container logging."
 }
 
 variable "subnet_id" {
-  type = string
+  type        = string
+  description = "ID of the delegated subnet where the Container Apps Environment will be deployed."
 }

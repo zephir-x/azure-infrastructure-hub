@@ -1,3 +1,6 @@
+# --- GymCore .NET REST API Deployment ---
+# Tailored for a C# .NET 9 API utilizing Entity Framework Core
+
 resource "azurerm_container_app" "gymcore_api" {
   name                         = "app-gymcore-api-${var.environment}"
   container_app_environment_id = var.container_app_environment_id
@@ -18,12 +21,15 @@ resource "azurerm_container_app" "gymcore_api" {
     allow_insecure_connections = false
     external_enabled           = true
     target_port                = 8080
-    
+
     traffic_weight {
       percentage      = 100
       latest_revision = true
     }
   }
+
+  # --- Key Vault Secret Bindings ---
+  # Maps Azure Key Vault secrets directly to the Container App runtime
 
   secret {
     name                = "db-connection-string"
@@ -58,12 +64,15 @@ resource "azurerm_container_app" "gymcore_api" {
   template {
     min_replicas = 1
     max_replicas = 10
-    
+
     container {
       name   = "gymcore-api"
-      image  = "mcr.microsoft.com/k8se/quickstart:latest"
+      image  = "mcr.microsoft.com/k8se/quickstart:latest" # Placeholder for CI/CD pipeline
       cpu    = 0.5
       memory = "1Gi"
+
+      # --- Application Environment Variables ---
+      # Injects secrets bound above securely into the .NET configuration provider
 
       env {
         name  = "ASPNETCORE_ENVIRONMENT"
@@ -89,6 +98,8 @@ resource "azurerm_container_app" "gymcore_api" {
         name        = "DeepSeek__ApiKey"
         secret_name = "deepseek-api-key"
       }
+
+      # Generates a predictable frontend URL used by the .NET backend to configure CORS policies dynamically
       env {
         name  = "FrontendUrl"
         value = "https://app-gymcore-front-${var.environment}.${var.location}.azurecontainerapps.io"
